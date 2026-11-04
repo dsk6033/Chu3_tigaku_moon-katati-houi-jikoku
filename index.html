@@ -1,0 +1,496 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>月の形・時刻・方位</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&family=Shippori+Mincho+B1:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* 配置: 左に3変数の操作盤。右に答えの一文、南を向いた空(主役)、北極から見た地球と月、1日の時間バー、関係表。 */
+:root{
+  --bg:#EDF0F5; --surface:#FFFFFF; --surface-2:#E3E8F1;
+  --ink:#172036; --ink-2:#4B5774; --line:#CBD3E2;
+  --accent:#2F4BA8; --accent-ink:#FFFFFF; --accent-soft:#DDE4F8;
+  --moon:#F4E6A8;
+  --f-display:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  --f-num:"DM Mono","SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1324; --surface:#151C31; --surface-2:#1E2842;
+    --ink:#E8ECF6; --ink-2:#A5B0CA; --line:#2C3858;
+    --accent:#8FA8FF; --accent-ink:#0D1324; --accent-soft:#222F5A;
+    --moon:#F4E6A8; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1324; --surface:#151C31; --surface-2:#1E2842;
+  --ink:#E8ECF6; --ink-2:#A5B0CA; --line:#2C3858;
+  --accent:#8FA8FF; --accent-ink:#0D1324; --accent-soft:#222F5A;
+  --moon:#F4E6A8; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.65;
+  padding-block:20px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.app{max-width:1180px;margin:0 auto}
+.head{margin-bottom:18px}
+.head h1{font-family:var(--f-display);font-size:clamp(26px,5vw,34px);line-height:1.25;margin:0 0 6px;text-wrap:balance}
+.head p{margin:0;color:var(--ink-2);max-width:46em}
+.grid{display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.ctrl{display:flex;flex-direction:column;gap:16px}
+.mode-label{font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:6px;letter-spacing:.04em}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface-2)}
+.seg label{position:relative;cursor:pointer}
+.seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.seg span{display:block;text-align:center;padding:9px 0;font-weight:700;color:var(--ink-2)}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink)}
+.seg input:focus-visible+span{outline:3px solid var(--ink);outline-offset:-3px}
+.mode-help{margin:8px 0 0;font-size:13px;color:var(--ink-2)}
+.vars{display:flex;flex-direction:column;gap:10px}
+.var{border:1px solid var(--line);border-radius:8px;padding:12px 12px 10px;min-width:0}
+.var.is-output{border-color:var(--accent);background:var(--accent-soft)}
+.var-head{display:flex;align-items:baseline;gap:8px}
+.var-name{font-family:var(--f-display);font-size:19px}
+.var-unit{font-size:12.5px;color:var(--ink-2)}
+.badge{margin-left:auto;font-size:12px;font-weight:700;background:var(--accent);color:var(--accent-ink);padding:1px 9px;border-radius:99px}
+.read{display:flex;align-items:center;gap:10px;margin:6px 0 2px;min-height:44px}
+.read b{font-size:18px;font-weight:700}
+.read small{display:block;color:var(--ink-2);font-size:12.5px;line-height:1.4}
+.mini{flex:none;width:44px;height:44px}
+.big{font-family:var(--f-num);font-size:28px;line-height:1.2}
+.bigaz{font-size:21px;font-weight:700}
+.dim{color:var(--ink-2)}
+input[type=range]{width:100%;margin:6px 0 0;accent-color:var(--accent)}
+input[type=range]:disabled{opacity:.55}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.ticks{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-2);padding:0 2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.btn,.chip{font:inherit;font-weight:700;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:8px;cursor:pointer}
+.btn{padding:7px 12px}
+.chip{padding:3px 10px;font-size:13px;border-radius:99px}
+.btn:hover,.chip:hover{background:var(--accent-soft)}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.row{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.small{font-size:12.5px;color:var(--ink-2);margin:6px 0 0;line-height:1.5}
+.stage{display:flex;flex-direction:column;gap:16px;min-width:0}
+.answer .lab{font-size:12.5px;font-weight:700;color:var(--ink-2);letter-spacing:.06em}
+.answer p{font-family:var(--f-display);font-size:clamp(20px,3.4vw,27px);line-height:1.55;margin:4px 0 0;text-wrap:balance}
+.k{color:var(--accent);white-space:nowrap}
+.frame{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.frame h2{font-size:14px;margin:0 0 8px;color:var(--ink-2);letter-spacing:.04em}
+.frame svg{display:block;width:100%;height:auto;border-radius:6px}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.pair{grid-template-columns:minmax(0,1fr)}}
+.cap{font-size:12.5px;color:var(--ink-2);margin:8px 0 0;line-height:1.55}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+.stat{background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.stat span{display:block;font-size:12px;color:var(--ink-2)}
+.stat b{font-family:var(--f-num);font-size:20px;font-weight:500}
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:480px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{font-size:12.5px;color:var(--ink-2);font-weight:700}
+td{font-family:var(--f-num)}
+tr.on td,tr.on th{background:var(--accent-soft)}
+.rowbtn{font:inherit;font-weight:700;color:var(--ink);background:none;border:0;padding:0;cursor:pointer;display:flex;align-items:center;gap:8px}
+.rowbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
+.note{font-size:13px;color:var(--ink-2);margin:0;max-width:60em}
+svg text{font-family:var(--f-body)}
+.halo{paint-order:stroke;stroke:rgba(8,14,38,.78);stroke-width:3px;stroke-linejoin:round;fill:#fff}
+.lbl{fill:var(--ink-2);font-size:11.5px}
+.orbit{fill:none;stroke:var(--ink-2);stroke-opacity:.55;stroke-dasharray:3 5}
+.hor{stroke:var(--ink);stroke-width:2}
+.sight{stroke:var(--accent);stroke-width:2}
+.sight.off{stroke:var(--ink-2);stroke-dasharray:4 4;opacity:.75}
+.obs{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.txt{fill:var(--ink);font-size:12px;font-weight:700}
+.trk{fill:var(--surface-2)}
+.mbar{fill:var(--moon);stroke:var(--ink-2);stroke-opacity:.6}
+.ax{stroke:var(--ink-2);stroke-opacity:.7}
+.nowl{stroke:var(--ink);stroke-width:2}
+.dia{fill:var(--accent);stroke:var(--surface);stroke-width:1.5}
+</style>
+
+<div class="app" lang="ja">
+  <header class="head">
+    <h1>月の形・時刻・方位</h1>
+    <p>この3つは、2つが決まると残りの1つが決まります。知りたいものを選び、ほかの2つを動かして確かめます。</p>
+  </header>
+
+  <div class="grid">
+    <aside class="panel ctrl" aria-label="3つの変数">
+      <div>
+        <div class="mode-label" id="mode-label">知りたいものを選ぶ</div>
+        <div class="seg" role="radiogroup" aria-labelledby="mode-label">
+          <label><input type="radio" name="mode" value="az" checked><span>方位</span></label>
+          <label><input type="radio" name="mode" value="time"><span>時刻</span></label>
+          <label><input type="radio" name="mode" value="phase"><span>形</span></label>
+        </div>
+        <p class="mode-help">選んだものは、残り2つの組み合わせで決まります。</p>
+      </div>
+
+      <div class="vars">
+        <section class="var" id="var-phase">
+          <div class="var-head"><label class="var-name" for="s-age">形</label><span class="var-unit">月齢</span><span class="badge" hidden>答え</span></div>
+          <div class="read"><div class="mini" id="mini"></div><div><b id="r-phase"></b><small id="r-age"></small></div></div>
+          <input type="range" id="s-age" min="0" max="29.5" step="0.1" value="7.4">
+          <div class="ticks" aria-hidden="true"><span>新月</span><span>上弦</span><span>満月</span><span>下弦</span><span>新月</span></div>
+          <div class="chips" id="chips"></div>
+        </section>
+
+        <section class="var" id="var-time">
+          <div class="var-head"><label class="var-name" for="s-time">時刻</label><span class="var-unit">24時間表示</span><span class="badge" hidden>答え</span></div>
+          <div class="read"><span class="big" id="r-time">18:00</span></div>
+          <input type="range" id="s-time" min="0" max="23.75" step="0.25" value="18">
+          <div class="ticks" aria-hidden="true"><span>0時</span><span>6時</span><span>12時</span><span>18時</span><span>24時</span></div>
+          <div class="row"><button type="button" class="btn" id="btn-play">時間を進める</button></div>
+        </section>
+
+        <section class="var" id="var-az">
+          <div class="var-head"><label class="var-name" for="s-az">方位</label><span class="var-unit">月が見える向き</span><span class="badge" hidden>答え</span></div>
+          <div class="read"><span class="bigaz" id="r-az">南（180°）</span></div>
+          <input type="range" id="s-az" min="90" max="270" step="1" value="180">
+          <div class="ticks" aria-hidden="true"><span>東</span><span>南東</span><span>南</span><span>南西</span><span>西</span></div>
+        </section>
+      </div>
+
+      <div>
+        <button type="button" class="btn" id="btn-now">いまの月にする</button>
+        <p class="small">月齢は平均の周期から出した目安で、半日ほどずれることがあります。時刻はこの端末の現在時刻です。</p>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <section class="panel answer" aria-live="polite"><div class="lab">答え</div><p id="answer"></p></section>
+
+      <section class="frame">
+        <h2>南を向いて見た空（左が東、右が西）</h2>
+        <svg id="sky" viewBox="0 0 760 395" role="img" aria-label="南を向いて見た空に、月と太陽の位置を示した図"></svg>
+        <p class="cap">点線は月の通り道です。点は、いまの形の月がその時刻にいる位置を表します。</p>
+      </section>
+
+      <div class="pair">
+        <section class="frame">
+          <h2>地球を北極の上から見た図</h2>
+          <svg id="top" viewBox="0 0 360 360" role="img" aria-label="地球、月、観測者の位置関係を北極の上から見た図"></svg>
+          <p class="cap">地球の自転も月の公転も反時計回りです。観測者の地平線より上に月があれば見えます。</p>
+        </section>
+        <section class="frame">
+          <h2>1日のなかで月が見える時間</h2>
+          <svg id="bar" viewBox="0 0 400 140" role="img" aria-label="太陽と月が見える時間帯を24時間の軸に示した図"></svg>
+          <div class="stats">
+            <div class="stat"><span>月の出</span><b id="st-rise">12:00</b></div>
+            <div class="stat"><span>南中</span><b id="st-culm">18:00</b></div>
+            <div class="stat"><span>月の入</span><b id="st-set">0:00</b></div>
+          </div>
+          <p class="cap">月齢が1日進むごとに、月の出・南中・月の入は約50分ずつ遅くなります。</p>
+        </section>
+      </div>
+
+      <section class="frame">
+        <h2>形と、月の出・南中・月の入（行を押すと形が切り替わります）</h2>
+        <div class="tscroll">
+          <table>
+            <thead><tr><th>形</th><th>月齢</th><th>月の出</th><th>南中</th><th>月の入</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <p class="note">このアプリの月は、春分・秋分のころの太陽と同じ道（天の赤道）を動くものとして単純にしています。緯度は三重県のあたり（北緯34.7°）で、月は真東から出て真西に入り、南中高度は約55°になります。実際の月は道が約5°傾き、季節や日によって出入りの方位や南中高度が少し変わります。</p>
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+var D2R=Math.PI/180, SYN=29.530588;
+var PHI=34.7*D2R, sinP=Math.sin(PHI), cosP=Math.cos(PHI);
+function $(id){return document.getElementById(id)}
+function norm360(a){return ((a%360)+360)%360}
+function norm180(a){a=norm360(a);return a>180?a-360:a}
+function norm24(h){return ((h%24)+24)%24}
+function clamp(v,a,b){return Math.min(b,Math.max(a,v))}
+function altOfH(H){return Math.asin(cosP*Math.cos(H*D2R))/D2R}
+function azOfH(H){var h=H*D2R;return norm360(Math.atan2(-Math.sin(h),-sinP*Math.cos(h))/D2R)}
+function HofAz(az){var lo=-90,hi=90;for(var i=0;i<48;i++){var m=(lo+hi)/2;if(azOfH(m)<az)lo=m;else hi=m}return (lo+hi)/2}
+function fmt(t){t=norm24(t);var h=Math.floor(t),m=Math.round((t-h)*60);if(m===60){h=(h+1)%24;m=0}return h+':'+(m<10?'0':'')+m}
+var DIRS=['北','北東','東','南東','南','南西','西','北西'];
+function dirName(az){return DIRS[Math.round(az/45)%8]}
+function phaseOf(a){
+  if(a<1||a>=28.5)return{n:'新月'};
+  if(a<6)return{n:'三日月'};
+  if(a<8.8)return{n:'上弦の月'};
+  if(a<13.3)return{n:'満月前のふくらんだ月'};
+  if(a<16.3)return{n:'満月'};
+  if(a<20.8)return{n:'満月後のふくらんだ月'};
+  if(a<23.5)return{n:'下弦の月'};
+  return{n:'有明の月'};
+}
+var PRESETS=[['新月',0],['三日月',3],['上弦の月',SYN/4],['満月',SYN/2],['下弦の月',SYN*3/4],['有明の月',26]];
+var uid=0;
+function moonSVG(E,r,unlit){
+  var id='mc'+(uid++),e=norm360(E),wax=e<=180,ee=wax?e:360-e;
+  var rx=Math.abs(Math.cos(ee*D2R))*r,sw=ee<90?0:1;
+  var lit=ee<0.8?'':'M0 '+(-r)+'A'+r+' '+r+' 0 0 1 0 '+r+'A'+rx.toFixed(2)+' '+r+' 0 0 '+sw+' 0 '+(-r)+'Z';
+  var maria='<ellipse cx="'+(-.28*r)+'" cy="'+(-.22*r)+'" rx="'+(.3*r)+'" ry="'+(.24*r)+'"/><ellipse cx="'+(.3*r)+'" cy="'+(.12*r)+'" rx="'+(.26*r)+'" ry="'+(.2*r)+'"/><ellipse cx="'+(-.1*r)+'" cy="'+(.45*r)+'" rx="'+(.22*r)+'" ry="'+(.15*r)+'"/><ellipse cx="'+(.38*r)+'" cy="'+(-.42*r)+'" rx="'+(.16*r)+'" ry="'+(.13*r)+'"/>';
+  var g='<g transform="'+(wax?'':'scale(-1 1)')+'"><circle r="'+r+'" fill="#0B1230" fill-opacity="'+(unlit==null?.6:unlit)+'" stroke="#fff" stroke-opacity=".5" stroke-width="1"/>';
+  if(lit)g+='<clipPath id="'+id+'"><path d="'+lit+'"/></clipPath><path d="'+lit+'" fill="#F6EAB4"/><g clip-path="url(#'+id+')" fill="#CDB968" fill-opacity=".5">'+maria+'</g>';
+  return g+'</g>';
+}
+function mix(a,b,f){
+  function p(h){return [1,3,5].map(function(i){return parseInt(h.slice(i,i+2),16)})}
+  var A=p(a),B=p(b);
+  return '#'+A.map(function(v,i){var x=Math.round(v+(B[i]-v)*f).toString(16);return x.length<2?'0'+x:x}).join('');
+}
+var SKYT=[[-18,'#060A1C','#111A3A'],[-8,'#1A2557','#4D4478'],[0,'#3B5AA8','#F0A26B'],[8,'#5A9AE0','#CBE2F4'],[20,'#4A8EDB','#BDE0F8']];
+function skyColors(a){
+  if(a<=SKYT[0][0])return[SKYT[0][1],SKYT[0][2]];
+  if(a>=SKYT[4][0])return[SKYT[4][1],SKYT[4][2]];
+  for(var i=0;i<4;i++){
+    if(a<=SKYT[i+1][0]){var f=(a-SKYT[i][0])/(SKYT[i+1][0]-SKYT[i][0]);return[mix(SKYT[i][1],SKYT[i+1][1],f),mix(SKYT[i][2],SKYT[i+1][2],f)]}
+  }
+}
+var seed=7;function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647}
+var STARS=[];for(var i=0;i<70;i++)STARS.push({u:rnd(),v:rnd(),r:.6+rnd()*1.1});
+
+var S={age:SYN/4,t:18,azIn:180,az:180,H:0,mode:'az',vis:true};
+function solve(){
+  var E=S.age/SYN*360;
+  if(S.mode==='az'){
+    var H=norm180((S.t-12)*15-E);S.H=H;S.vis=Math.abs(H)<=90+1e-6;S.az=S.vis?azOfH(clamp(H,-90,90)):null;
+  }else{
+    var H2=HofAz(S.azIn);S.H=H2;S.vis=true;S.az=S.azIn;
+    if(S.mode==='time')S.t=norm24(12+(H2+E)/15);
+    else S.age=norm360((S.t-12)*15-H2)/360*SYN;
+  }
+}
+
+/* ---- 空の眺め ---- */
+var lastW=0;
+function renderSky(E){
+  var svg=$('sky');
+  var W=clamp(Math.round(svg.clientWidth||760),320,820);
+  var H=Math.round(clamp(W*0.52,300,410)),hy=H-64,py=(hy-30)/56,x0=28,x1=W-28,a0=70,a1=290;
+  function X(az){return x0+(az-a0)/(a1-a0)*(x1-x0)}
+  function Y(alt){return hy-alt*py}
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  var sunH=norm180((S.t-12)*15),sunAlt=altOfH(sunH),c=skyColors(sunAlt);
+  var nf=clamp((-sunAlt-3)/12,0,1);
+  var s='<defs><linearGradient id="skyg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+c[0]+'"/><stop offset="1" stop-color="'+c[1]+'"/></linearGradient></defs>';
+  s+='<rect width="'+W+'" height="'+H+'" fill="url(#skyg)"/>';
+  s+='<g fill="#fff" opacity="'+nf.toFixed(2)+'">';
+  STARS.forEach(function(st){s+='<circle cx="'+(st.u*W).toFixed(1)+'" cy="'+(st.v*(hy-14)).toFixed(1)+'" r="'+st.r.toFixed(1)+'"/>'});
+  s+='</g>';
+  [20,40].forEach(function(a){
+    s+='<line x1="'+x0+'" x2="'+x1+'" y1="'+Y(a)+'" y2="'+Y(a)+'" stroke="#fff" stroke-opacity=".25" stroke-dasharray="2 6"/>';
+    s+='<text class="halo" x="'+(x0+2)+'" y="'+(Y(a)-4)+'" font-size="11">高度'+a+'°</text>';
+  });
+  var pts=[];for(var h=-90;h<=90;h+=3)pts.push(X(azOfH(h)).toFixed(1)+','+Y(altOfH(h)).toFixed(1));
+  s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2" stroke-dasharray="4 5"/>';
+  var mx=0,my=0;
+  if(S.vis){mx=X(S.az);my=Y(altOfH(S.H))}
+  for(var hr=0;hr<24;hr++){
+    var hh=norm180((hr-12)*15-E);
+    if(Math.abs(hh)>89)continue;
+    var px=X(azOfH(hh)),pyy=Y(altOfH(hh));
+    s+='<circle cx="'+px.toFixed(1)+'" cy="'+pyy.toFixed(1)+'" r="3" fill="#fff" fill-opacity=".9"/>';
+    if(S.vis&&Math.hypot(px-mx,pyy-my)<40)continue;
+    s+='<text class="halo" x="'+px.toFixed(1)+'" y="'+(pyy-9).toFixed(1)+'" font-size="12" text-anchor="middle">'+hr+'時</text>';
+  }
+  if(sunAlt>=0){
+    var sx=X(azOfH(sunH)),sy=Y(sunAlt);
+    s+='<circle cx="'+sx.toFixed(1)+'" cy="'+sy.toFixed(1)+'" r="22" fill="#FFD36B" fill-opacity=".3"/><circle cx="'+sx.toFixed(1)+'" cy="'+sy.toFixed(1)+'" r="13" fill="#FFC53D"/>';
+    s+='<text class="halo" x="'+sx.toFixed(1)+'" y="'+(sy+32).toFixed(1)+'" font-size="12" text-anchor="middle">太陽</text>';
+  }
+  s+='<rect y="'+hy+'" width="'+W+'" height="'+(H-hy)+'" fill="#222C2B"/><line x1="0" x2="'+W+'" y1="'+hy+'" y2="'+hy+'" stroke="#fff" stroke-opacity=".55"/>';
+  [[90,'東',1],[135,'南東',0],[180,'南',1],[225,'南西',0],[270,'西',1]].forEach(function(d){
+    var x=X(d[0]);
+    s+='<line x1="'+x+'" x2="'+x+'" y1="'+hy+'" y2="'+(hy+6)+'" stroke="#fff" stroke-opacity=".7"/>';
+    s+='<text x="'+x+'" y="'+(hy+30)+'" text-anchor="middle" fill="#E9EEF6" font-size="'+(d[2]?20:14)+'" font-weight="'+(d[2]?700:500)+'">'+d[1]+'</text>';
+    s+='<text x="'+x+'" y="'+(hy+50)+'" text-anchor="middle" fill="#A9B4C8" font-size="11">'+d[0]+'°</text>';
+  });
+  if(S.vis){
+    if(nf>.3)s+='<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="34" fill="#FFF4C8" fill-opacity=".16"/>';
+    if(hy-my>70){
+      s+='<line x1="'+mx.toFixed(1)+'" x2="'+mx.toFixed(1)+'" y1="'+(my+26).toFixed(1)+'" y2="'+hy+'" stroke="#fff" stroke-opacity=".75" stroke-dasharray="2 4"/>';
+      s+='<text class="halo" x="'+(mx+8).toFixed(1)+'" y="'+((my+26+hy)/2+4).toFixed(1)+'" font-size="12">高度'+Math.round(altOfH(S.H))+'°</text>';
+    }
+    s+='<g transform="translate('+mx.toFixed(1)+' '+my.toFixed(1)+')">'+moonSVG(E,22,.55)+'</g>';
+    s+='<polygon points="'+(mx-7).toFixed(1)+','+(hy+13)+' '+(mx+7).toFixed(1)+','+(hy+13)+' '+mx.toFixed(1)+','+(hy+3)+'" fill="#FFD34D"/>';
+  }else{
+    var bw=Math.min(W-40,380);
+    s+='<rect x="'+((W-bw)/2)+'" y="'+(hy*0.32)+'" width="'+bw+'" height="46" rx="8" fill="#0B1230" fill-opacity=".72"/>';
+    s+='<text x="'+(W/2)+'" y="'+(hy*0.32+28)+'" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">この時刻、月は地平線の下で見えません</text>';
+  }
+  svg.innerHTML=s;
+  lastW=W;
+}
+
+/* ---- 北極から見た図 ---- */
+function renderTop(E){
+  var cx=180,cy=180,R=135,re=54,th=(S.t-12)*15;
+  function P(ang,rad){return[cx+rad*Math.cos(ang*D2R),cy-rad*Math.sin(ang*D2R)]}
+  var s='<rect width="360" height="360" fill="var(--surface)"/>';
+  s+='<circle cx="404" cy="180" r="56" fill="#F5B73B"/>';
+  [130,155,180,205,230].forEach(function(y){
+    s+='<path d="M350 '+y+'L326 '+y+'M332 '+(y-4)+'L326 '+y+'L332 '+(y+4)+'" stroke="#E39A12" stroke-width="2" fill="none"/>';
+  });
+  s+='<text class="lbl" x="344" y="112" text-anchor="end">太陽の光</text>';
+  s+='<circle class="orbit" cx="'+cx+'" cy="'+cy+'" r="'+R+'"/>';
+  s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+re+'" fill="#27345F"/>';
+  s+='<path d="M'+cx+' '+(cy-re)+'A'+re+' '+re+' 0 0 1 '+cx+' '+(cy+re)+'Z" fill="#3F7FD0"/>';
+  [[0,'12時'],[90,'18時'],[180,'0時'],[270,'6時']].forEach(function(d){
+    var p=P(d[0],33);s+='<text class="halo" x="'+p[0].toFixed(1)+'" y="'+(p[1]+4).toFixed(1)+'" font-size="11" font-weight="700" text-anchor="middle">'+d[1]+'</text>';
+  });
+  [[0,'新月'],[90,'上弦'],[180,'満月'],[270,'下弦']].forEach(function(d){
+    var p=P(d[0],104);s+='<text class="lbl" x="'+p[0].toFixed(1)+'" y="'+(p[1]+4).toFixed(1)+'" text-anchor="middle">'+d[1]+'</text>';
+  });
+  var m=P(E,R),o=P(th,re);
+  s+='<line class="sight'+(S.vis?'':' off')+'" x1="'+o[0].toFixed(1)+'" y1="'+o[1].toFixed(1)+'" x2="'+m[0].toFixed(1)+'" y2="'+m[1].toFixed(1)+'"/>';
+  var ex=-Math.sin(th*D2R),ey=-Math.cos(th*D2R);
+  var a=[o[0]+50*ex,o[1]+50*ey],b=[o[0]-50*ex,o[1]-50*ey],z=P(th,re+16);
+  s+='<line class="hor" x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'"/>';
+  s+='<line class="hor" x1="'+o[0].toFixed(1)+'" y1="'+o[1].toFixed(1)+'" x2="'+z[0].toFixed(1)+'" y2="'+z[1].toFixed(1)+'" stroke-dasharray="2 3"/>';
+  s+='<text class="txt" x="'+(a[0]+13*ex).toFixed(1)+'" y="'+(a[1]+13*ey+4).toFixed(1)+'" text-anchor="middle">東</text>';
+  s+='<text class="txt" x="'+(b[0]-13*ex).toFixed(1)+'" y="'+(b[1]-13*ey+4).toFixed(1)+'" text-anchor="middle">西</text>';
+  s+='<circle class="obs" cx="'+o[0].toFixed(1)+'" cy="'+o[1].toFixed(1)+'" r="6"/>';
+  var lp=P(th,re+31);
+  s+='<text class="txt" x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+4).toFixed(1)+'" text-anchor="middle" font-size="11">観測者</text>';
+  s+='<circle cx="'+m[0].toFixed(1)+'" cy="'+m[1].toFixed(1)+'" r="13" fill="#59627F"/>';
+  s+='<path d="M'+m[0].toFixed(1)+' '+(m[1]-13).toFixed(1)+'A13 13 0 0 1 '+m[0].toFixed(1)+' '+(m[1]+13).toFixed(1)+'Z" fill="#F6EAB4"/>';
+  $('top').innerHTML=s;
+}
+
+/* ---- 1日のバー ---- */
+function renderBar(E,rise,culm){
+  function x(t){return 44+t/24*344}
+  var s='';
+  s+='<text class="lbl" x="2" y="36">太陽</text><rect class="trk" x="44" y="22" width="344" height="20" rx="3"/><rect x="'+x(6)+'" y="22" width="'+(x(18)-x(6))+'" height="20" rx="3" fill="#F0B440"/>';
+  s+='<text class="lbl" x="2" y="73">月</text><rect class="trk" x="44" y="58" width="344" height="20" rx="3"/>';
+  var end=rise+12;
+  if(end>24){
+    s+='<rect class="mbar" x="'+x(rise)+'" y="58" width="'+(x(24)-x(rise))+'" height="20" rx="3"/><rect class="mbar" x="44" y="58" width="'+(x(end-24)-44)+'" height="20" rx="3"/>';
+  }else s+='<rect class="mbar" x="'+x(rise)+'" y="58" width="'+(x(end)-x(rise))+'" height="20" rx="3"/>';
+  var cxp=x(culm);
+  s+='<polygon class="dia" points="'+cxp+',60 '+(cxp+7)+',68 '+cxp+',76 '+(cxp-7)+',68"/>';
+  var anc=cxp<80?'start':(cxp>350?'end':'middle');
+  s+='<text class="lbl" x="'+cxp+'" y="94" text-anchor="'+anc+'">南中 '+fmt(culm)+'</text>';
+  for(var h=0;h<=24;h+=3){
+    s+='<line class="ax" x1="'+x(h)+'" x2="'+x(h)+'" y1="102" y2="107"/><text class="lbl" x="'+x(h)+'" y="121" text-anchor="middle">'+h+'</text>';
+  }
+  var nx=x(S.t),na=nx<76?'start':(nx>340?'end':'middle');
+  s+='<line class="nowl" x1="'+nx+'" x2="'+nx+'" y1="16" y2="100"/><text class="txt" x="'+nx+'" y="11" text-anchor="'+na+'">いま '+fmt(S.t)+'</text>';
+  $('bar').innerHTML=s;
+}
+
+/* ---- 表と部品 ---- */
+function buildTable(){
+  var h='';
+  PRESETS.forEach(function(p){
+    var E=p[1]/SYN*360,r=norm24(12+(E-90)/15),c=norm24(12+E/15),st=norm24(12+(E+90)/15);
+    h+='<tr data-age="'+p[1]+'"><th scope="row"><button type="button" class="rowbtn"><svg width="28" height="28" viewBox="-14 -14 28 28" aria-hidden="true">'+moonSVG(E,12,.9)+'</svg>'+p[0]+'</button></th><td>'+(Math.round(p[1]*10)/10)+'</td><td>'+fmt(r)+'</td><td>'+fmt(c)+'</td><td>'+fmt(st)+'</td></tr>';
+  });
+  $('tbody').innerHTML=h;
+  Array.prototype.forEach.call($('tbody').querySelectorAll('tr'),function(tr){
+    tr.querySelector('button').addEventListener('click',function(){pickAge(parseFloat(tr.getAttribute('data-age')))});
+  });
+  var c='';
+  PRESETS.forEach(function(p){c+='<button type="button" class="chip" data-age="'+p[1]+'" aria-pressed="false">'+p[0]+'</button>'});
+  $('chips').innerHTML=c;
+  Array.prototype.forEach.call($('chips').children,function(b){
+    b.addEventListener('click',function(){pickAge(parseFloat(b.getAttribute('data-age')))});
+  });
+}
+function agedist(a,b){var d=Math.abs(a-b);return Math.min(d,SYN-d)}
+function pickAge(a){
+  if(S.mode==='phase')setMode('az',true);
+  S.age=a;update();
+}
+
+function render(){
+  var E=S.age/SYN*360,ph=phaseOf(S.age);
+  var rise=norm24(12+(E-90)/15),culm=norm24(12+E/15),set_=norm24(12+(E+90)/15);
+  $('s-age').value=S.age;$('s-time').value=S.t;
+  if(S.az!=null)$('s-az').value=S.az;else $('s-az').value=S.azIn;
+  $('r-phase').textContent=ph.n;
+  $('r-age').textContent='月齢 '+S.age.toFixed(1)+'・光る部分 '+Math.round((1-Math.cos(E*D2R))/2*100)+'%';
+  $('mini').innerHTML='<svg viewBox="-24 -24 48 48" width="44" height="44" aria-hidden="true">'+moonSVG(E,20,.9)+'</svg>';
+  $('r-time').textContent=fmt(S.t);
+  if(S.vis&&S.az!=null){$('r-az').textContent=dirName(S.az)+'（'+Math.round(S.az)+'°）';$('r-az').className='bigaz'}
+  else{$('r-az').textContent='見えない（地平線の下）';$('r-az').className='bigaz dim'}
+  var out={az:'var-az',time:'var-time',phase:'var-phase'};
+  Object.keys(out).forEach(function(k){
+    var el=$(out[k]),isOut=(k===S.mode);
+    el.classList.toggle('is-output',isOut);
+    el.querySelector('.badge').hidden=!isOut;
+  });
+  $('s-age').disabled=S.mode==='phase';
+  $('s-time').disabled=S.mode==='time';
+  $('s-az').disabled=S.mode==='az';
+  $('btn-play').disabled=S.mode==='time';
+  $('btn-play').textContent=timer?'とめる':'時間を進める';
+  $('st-rise').textContent=fmt(rise);$('st-culm').textContent=fmt(culm);$('st-set').textContent=fmt(set_);
+  function k(x){return '<span class="k">'+x+'</span>'}
+  var h,nm=ph.n;
+  if(S.mode==='az'){
+    if(S.vis)h=k(nm)+'は、'+k(fmt(S.t))+'に'+k(dirName(S.az)+'の空')+'、高度'+Math.round(altOfH(S.H))+'°に見える。';
+    else h=k(nm)+'は、'+k(fmt(S.t))+'には地平線の下にあり、'+k('見えない')+'。';
+  }else if(S.mode==='time'){
+    h=k(nm)+'が'+k(dirName(S.az)+'の空')+'に見えるのは、'+k(fmt(S.t))+'ごろ。';
+  }else{
+    h=k(fmt(S.t))+'に'+k(dirName(S.az)+'の空')+'に見える月は、'+k(nm)+'（月齢'+S.age.toFixed(1)+'）。';
+  }
+  $('answer').innerHTML=h;
+  Array.prototype.forEach.call($('chips').children,function(b){b.setAttribute('aria-pressed',agedist(S.age,parseFloat(b.getAttribute('data-age')))<0.6?'true':'false')});
+  Array.prototype.forEach.call($('tbody').children,function(tr){tr.classList.toggle('on',agedist(S.age,parseFloat(tr.getAttribute('data-age')))<1.0)});
+  renderSky(E);renderTop(E);renderBar(E,rise,culm);
+}
+function update(){solve();render()}
+
+var timer=null;
+function stopPlay(){if(timer){clearInterval(timer);timer=null}}
+function setMode(m,silent){
+  if(S.mode==='az'&&S.vis&&S.az!=null)S.azIn=S.az;
+  S.mode=m;
+  var r=document.querySelector('input[name=mode][value='+m+']');if(r)r.checked=true;
+  if(m==='time')stopPlay();
+  if(!silent)update();
+}
+
+Array.prototype.forEach.call(document.querySelectorAll('input[name=mode]'),function(r){
+  r.addEventListener('change',function(){if(r.checked)setMode(r.value)});
+});
+$('s-age').addEventListener('input',function(e){S.age=parseFloat(e.target.value);update()});
+$('s-time').addEventListener('input',function(e){S.t=parseFloat(e.target.value);update()});
+$('s-az').addEventListener('input',function(e){S.azIn=parseFloat(e.target.value);update()});
+$('btn-play').addEventListener('click',function(){
+  if(timer){stopPlay();render();return}
+  timer=setInterval(function(){S.t=norm24(S.t+0.08);update()},60);
+  render();
+});
+$('btn-now').addEventListener('click',function(){
+  var ref=Date.UTC(2000,0,6,18,14),d=new Date();
+  S.age=(((d.getTime()-ref)/86400000)%SYN+SYN)%SYN;
+  S.t=d.getHours()+d.getMinutes()/60;
+  stopPlay();setMode('az',true);update();
+});
+
+buildTable();
+update();
+if(window.ResizeObserver){
+  new ResizeObserver(function(){
+    var w=clamp(Math.round($('sky').clientWidth||760),320,820);
+    if(w!==lastW)render();
+  }).observe($('sky').parentElement);
+}
+})();
+</script>
+
+</body></html>
